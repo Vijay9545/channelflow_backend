@@ -13,18 +13,28 @@ export const addSingleProduct = async (req, res) => {
         // Deeply parse the flat multipart keys created by Multer 
         // e.g. "variants[distributor][price]" -> variants.distributor.price
         req.body = qs.parse(qs.stringify(req.body));
-        
         const mainImageFile = req.uploadedImages?.find(file => file.field === "mainImage");
+        const extraImageFiles = req.uploadedImages?.filter(file => file.field === "images");
+        
         let mainImage = req.body.mainImage;
+        let images = req.body.images || [];
+        if (!Array.isArray(images)) images = [images];
 
         if (mainImageFile) {
             mainImage = mainImageFile.s3Url;
         }
 
+        if (extraImageFiles && extraImageFiles.length > 0) {
+            const newImageUrls = extraImageFiles.map(file => file.s3Url);
+            images = [...images, ...newImageUrls];
+        }
+
         if (!mainImage) {
             return response.error(res, resStatusCode.CLIENT_ERROR, "Main image is required");
         };
+
         req.body.mainImage = mainImage;
+        req.body.images = images;
         if (typeof req.body.variants !== "object" || Array.isArray(req.body.variants)) {
             return response.error(res, resStatusCode.CLIENT_ERROR, resMessage.VARIANTS_INVALID);
         };
@@ -198,8 +208,20 @@ export async function updateProduct(req, res) {
         req.body = qs.parse(qs.stringify(req.body));
 
         const mainImageFile = req.uploadedImages?.find(file => file.field === "mainImage");
+        const extraImageFiles = req.uploadedImages?.filter(file => file.field === "images");
+
         if (mainImageFile) {
             req.body.mainImage = mainImageFile.s3Url;
+        }
+
+        let images = req.body.images || [];
+        if (!Array.isArray(images)) images = [images];
+
+        if (extraImageFiles && extraImageFiles.length > 0) {
+            const newImageUrls = extraImageFiles.map(file => file.s3Url);
+            req.body.images = [...images, ...newImageUrls];
+        } else {
+            req.body.images = images;
         }
 
         // Validate the incoming updates

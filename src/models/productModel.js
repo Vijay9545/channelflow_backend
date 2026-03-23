@@ -44,6 +44,7 @@ const productSchema = new Schema(
         gst: { type: String, default: "" },
         isDelete: { type: Boolean, default: false },
         isActive: { type: Boolean, default: true },
+        images: { type: [String], default: [] },
     }, { timestamps: true },
 );
 export const productModel = model(dbTableName.PRODUCT, productSchema);
@@ -120,6 +121,9 @@ export const productValidation = Joi.object({
     }),
     priceTiers: Joi.array().items(tierObj).default([]).messages({
         "array.base": "Price tiers must be an array"
+    }),
+    images: Joi.array().items(Joi.string().uri()).default([]).messages({
+        "array.base": "Images must be an array",
     }),
 });
 

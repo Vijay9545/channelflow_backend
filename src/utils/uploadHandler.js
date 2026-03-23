@@ -153,8 +153,11 @@ export const blogImage = createS3Uploader({
 export const productImages = createS3Uploader({
     folderName: 'products',
     filePrefix: 'product',
-    fieldType: 'single',
-    fieldName: 'mainImage',
+    fieldType: 'fields',
+    customFields: [
+        { name: 'mainImage', maxCount: 1 },
+        { name: 'images', maxCount: 10 }
+    ],
     fileSizeMB: 2,
 });
 
