@@ -7,6 +7,7 @@ import product from "./productRoutes.js";
 import cart from "./cartRoutes.js";
 import order from "./orderRoutes.js";
 import reward from "./rewardRoutes.js";
+import promotion from "./promotionRoutes.js";
 
 const router = Router();
 
@@ -17,5 +18,6 @@ router.use("/product", product);
 router.use("/cart", cart);
 router.use("/order", order);
 router.use("/reward", reward);
+router.use("/promotions", promotion);
 
 export default router;

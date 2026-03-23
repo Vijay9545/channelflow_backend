@@ -6,13 +6,18 @@ dotenv.config();
 import fs from 'fs';
 
 const isProduction = process.env.ENVIRONMENT === 'production';
-export const s3 = new S3Client({
-    region: process.env.AWS_REGION || "",
-    credentials: {
-        accessKeyId: process.env.AWS_ACCESS_KEY_ID || "",
-        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || "",
-    },
-});
+export let s3;
+if (process.env.AWS_REGION && process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
+    s3 = new S3Client({
+        region: process.env.AWS_REGION,
+        credentials: {
+            accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+            secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+        },
+    });
+} else {
+    console.warn('AWS credentials or region missing. S3 uploads will not work.');
+}
 
 const saveLocally = async (file, folderName, filePrefix, fieldname) => {
     const timestamp = Date.now();
@@ -27,13 +32,13 @@ const saveLocally = async (file, folderName, filePrefix, fieldname) => {
 
     const filePath = `${localFolder}/${filename}`;
     fs.writeFileSync(filePath, file.buffer);
-    console.log('s3Url', `${process.env.BASE_URL}/${process.env.PORT}/${folderName}/${filename}`, '::::', 'field:', fieldname);
+    const baseUrl = process.env.BASE_URL || `http://localhost:${process.env.PORT || 8001}`;
+    console.log('localUrl', `${baseUrl}/${folderName}/${filename}`, '::::', 'field:', fieldname);
     return {
         field: fieldname,
         fileName: filename,
         originalName: file.originalname,
-        s3Url: `${process.env.BASE_URL}/${folderName}/${filename}`,
-        // s3Url: `https://molimornode-production.up.railway.app/${folderName}/${filename}`,
+        s3Url: `${baseUrl}/${folderName}/${filename}`,
     };
 };
 
@@ -75,6 +80,10 @@ export const createS3Uploader = ({ folderName, filePrefix = '', fieldType = 'sin
                             const finalMime = isBlob ? 'image/jpeg' : file.mimetype; // Default to image/jpeg if it's a blob
                             const filename = `${filePrefix}-${timestamp}-${first4Chars}${finalExt}`;
                             const s3Key = `${folderName}/${filename}`;
+
+                            if (!s3) {
+                                throw new Error("S3 client not initialized. Check your AWS credentials in .env");
+                            }
 
                             const command = new PutObjectCommand({
                                 Bucket: process.env.AWS_BUCKET_NAME,

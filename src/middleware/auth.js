@@ -20,15 +20,26 @@ export async function generateJWToken(payload) {
 };
 
 export async function validateAccessToken(req, res, next) {
-    const token = req.headers.authorization || req.headers.Authorization;
+    let token = req.headers.authorization || req.headers.Authorization;
     try {
         if (!token) {
             return response.error(res, resStatusCode.CLIENT_ERROR, resMessage.NO_TOKEN_PROVIDED, {});
         };
+
+        // Strip 'Bearer ' if present
+        if (token.startsWith("Bearer ")) {
+            token = token.split(" ")[1];
+        }
+
         const decodedToken = jwt.verify(token, process.env.JWT_SECRET, {
             issuer: "tracking",
         });
-        const authenticatedUser = await userModel.findById({ _id: decodedToken._id });
+
+        if (!decodedToken || !decodedToken._id) {
+            return response.error(res, resStatusCode.INVALID_TOKEN, resMessage.TOKEN_INVALID, {});
+        }
+
+        const authenticatedUser = await userModel.findById(decodedToken._id);
         if (!authenticatedUser) {
             return response.error(res, resStatusCode.INVALID_TOKEN, resMessage.UNAUTHORIZED, {});
         };

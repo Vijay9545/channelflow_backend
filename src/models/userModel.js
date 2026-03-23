@@ -24,12 +24,12 @@ export const loginValidation = Joi.object({
 const userSchema = new Schema(
     {
         uId: { type: Number, unique: true, required: true },
-        name: { type: String, require: true },
+        name: { type: String, default: "" },
         email: { type: String, unique: true, sparse: true },
         password: { type: String },
-        company: { type: String, require: true },
-        mobile: { type: String, require: true },
-        deliveryAddress: { type: String, required: true },
+        company: { type: String, default: "" },
+        mobile: { type: String, required: true },
+        deliveryAddress: { type: String, default: "" },
         businessAddress: { type: String, default: "" },
         rewardPoints: { type: Number },
         role: { type: Number, default: 1 }, // 0: Super Admin, 1: User, 2: Product Manager, 3: Order Manager

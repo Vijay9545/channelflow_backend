@@ -5,7 +5,9 @@ import { dbTableName } from "../utils/constants.js"
 const categorySchema = new Schema(
     {
         name: { type: String, required: true },
+        description: { type: String, default: "" },
         isActive: { type: Boolean, default: true },
+        isDelete: { type: Boolean, default: false },
     }, { timestamps: true },
 );
 export const categoryModel = model(dbTableName.CATEGORY, categorySchema);
@@ -18,6 +20,8 @@ export const categoryValidation = Joi.object({
         'string.max': 'Category Name cannot be longer than 100 characters.',
         'any.required': 'Category Name is required.',
     }),
+    description: Joi.string().allow("").max(500),
+    isActive: Joi.boolean().default(true),
 });
 
 export const idValidation = Joi.object({

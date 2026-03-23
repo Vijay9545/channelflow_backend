@@ -20,6 +20,7 @@
   },
   "homepage": "https://github.com/CodeSmith-infosoft/channel-flow-node#readme",
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1014.0",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.5",
     "dotenv": "^17.2.1",
@@ -31,6 +32,7 @@
     "joi": "^18.0.1",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.18.0",
+    "multer": "^2.1.1",
     "node-cron": "^4.2.1",
     "nodemon": "^3.1.10",
     "npm": "^11.5.2",

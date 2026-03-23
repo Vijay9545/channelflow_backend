@@ -4,16 +4,26 @@ import {
 import response from "../utils/response.js";
 import { resStatusCode, resMessage, dbTableName } from "../utils/constants.js";
 import { getPriceByQty } from "../utils/pricing.js";
+import qs from "qs";
 const SERVER_ERROR_STATUS = resStatusCode.INTERNAL_SERVER_ERROR;
 const SERVER_ERROR_MESSAGE = resMessage.INTERNAL_SERVER_ERROR;
 
 export const addSingleProduct = async (req, res) => {
     try {
-        const mainImageFile = req.uploadedImages.find(file => file.field === "mainImage");
-        if (!mainImageFile) {
+        // Deeply parse the flat multipart keys created by Multer 
+        // e.g. "variants[distributor][price]" -> variants.distributor.price
+        req.body = qs.parse(qs.stringify(req.body));
+        
+        const mainImageFile = req.uploadedImages?.find(file => file.field === "mainImage");
+        let mainImage = req.body.mainImage;
+
+        if (mainImageFile) {
+            mainImage = mainImageFile.s3Url;
+        }
+
+        if (!mainImage) {
             return response.error(res, resStatusCode.CLIENT_ERROR, "Main image is required");
         };
-        const mainImage = mainImageFile.s3Url;
         req.body.mainImage = mainImage;
         if (typeof req.body.variants !== "object" || Array.isArray(req.body.variants)) {
             return response.error(res, resStatusCode.CLIENT_ERROR, resMessage.VARIANTS_INVALID);
@@ -65,7 +75,10 @@ export async function getProductById(req, res) {
         return response.error(res, resStatusCode.CLIENT_ERROR, error.details[0].message);
     };
     try {
-        const product = await productModel.findById(id).populate('subCategoryId');
+        const product = await productModel.findOne({ _id: id, isDelete: false }).populate('subCategoryId');
+        if (!product) {
+            return response.error(res, resStatusCode.NOT_FOUND, "Product not found");
+        }
         const productData = {
             ...product.toObject(),
             subCategoryId: product?.subCategoryId?._id,
@@ -92,6 +105,9 @@ export async function getProductList(req, res) {
                 filter[`variants.${type}.price`].$lte = Number(maxPrice);
             };
         };
+        // Ensure we don't fetch soft-deleted products
+        filter.isDelete = false;
+        
         if (miniOrderQty && type) {
             filter[`variants.${type}.miniOrderQty`] = { $lte: Number(miniOrderQty) };
         };
@@ -147,3 +163,64 @@ export async function getProductPricing(req, res) {
         return response.error(res, SERVER_ERROR_STATUS, SERVER_ERROR_MESSAGE);
     };
 };
+
+export async function deleteProduct(req, res) {
+    const { id } = req.params;
+    const { error } = idValidation.validate({ id });
+    if (error) {
+        return response.error(res, resStatusCode.CLIENT_ERROR, error.details[0].message);
+    }
+    try {
+        const product = await productModel.findByIdAndUpdate(
+            id,
+            { isDelete: true, isActive: false },
+            { new: true }
+        );
+        if (!product) {
+            return response.error(res, resStatusCode.NOT_FOUND, "Product not found");
+        }
+        return response.success(res, resStatusCode.ACTION_COMPLETE, "Product deleted successfully", product);
+    } catch (err) {
+        console.error("deleteProduct Error:", err);
+        return response.error(res, SERVER_ERROR_STATUS, SERVER_ERROR_MESSAGE);
+    }
+};
+
+export async function updateProduct(req, res) {
+    const { id } = req.params;
+    const { error: idErr } = idValidation.validate({ id });
+    if (idErr) {
+        return response.error(res, resStatusCode.CLIENT_ERROR, idErr.details[0].message);
+    }
+
+    try {
+        // Deeply parse the flat multipart keys
+        req.body = qs.parse(qs.stringify(req.body));
+
+        const mainImageFile = req.uploadedImages?.find(file => file.field === "mainImage");
+        if (mainImageFile) {
+            req.body.mainImage = mainImageFile.s3Url;
+        }
+
+        // Validate the incoming updates
+        const { error } = productValidation.validate(req.body);
+        if (error) {
+            return response.error(res, resStatusCode.CLIENT_ERROR, error.details[0].message);
+        }
+
+        const product = await productModel.findOneAndUpdate(
+            { _id: id, isDelete: false },
+            { $set: { ...req.body, gst: req.body.gst ? `${req.body.gst} %` : "" } },
+            { new: true }
+        );
+
+        if (!product) {
+            return response.error(res, resStatusCode.NOT_FOUND, "Product not found");
+        }
+
+        return response.success(res, resStatusCode.ACTION_COMPLETE, "Product updated successfully", product);
+    } catch (err) {
+        console.error("updateProduct Error:", err);
+        return response.error(res, SERVER_ERROR_STATUS, SERVER_ERROR_MESSAGE);
+    }
+}
