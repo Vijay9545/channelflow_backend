@@ -7,14 +7,31 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 // download your service account key JSON from Firebase Console
-const serviceAccountPath = join(__dirname, "channel-flow-b4b92-firebase-adminsdk-fbsvc-cc1c1241f8.json");
-const serviceAccount = JSON.parse(readFileSync(serviceAccountPath, "utf8"));
+let serviceAccount;
+if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+    try {
+        serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+    } catch (parseError) {
+        console.error("Error parsing FIREBASE_SERVICE_ACCOUNT env var:", parseError);
+    }
+}
 
-if (!admin.apps.length) {
+if (!serviceAccount) {
+    const serviceAccountPath = join(__dirname, "channel-flow-b4b92-firebase-adminsdk-fbsvc-cc1c1241f8.json");
+    try {
+        serviceAccount = JSON.parse(readFileSync(serviceAccountPath, "utf8"));
+    } catch (fileError) {
+        console.error("Error reading Firebase service account file:", fileError.message);
+    }
+}
+
+if (serviceAccount && !admin.apps.length) {
     admin.initializeApp({
         credential: admin.credential.cert(serviceAccount),
     });
     console.log("Firebase Admin Initialized Successfully");
+} else if (!serviceAccount) {
+    console.error("Firebase Admin could not be initialized: No service account credentials found.");
 }
 
 export default admin;
