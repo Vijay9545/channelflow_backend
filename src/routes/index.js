@@ -9,6 +9,7 @@ import order from "./orderRoutes.js";
 import reward from "./rewardRoutes.js";
 import promotion from "./promotionRoutes.js";
 import rating from "./ratingRoutes.js";
+import pincode from "./pincodeRoutes.js";
 
 const router = Router();
 
@@ -21,5 +22,6 @@ router.use("/order", order);
 router.use("/reward", reward);
 router.use("/promotions", promotion);
 router.use("/rating", rating);
+router.use("/pincode", pincode);
 
 export default router;

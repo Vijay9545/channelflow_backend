@@ -44,5 +44,6 @@ export const dbTableName = {
   ORDER: "orders",
   REWARD: "rewards",
   PROMOTION: "promotions",
-  RATING: "ratings"
+  RATING: "ratings",
+  PINCODE: "pincodes"
 };

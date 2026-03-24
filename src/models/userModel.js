@@ -13,6 +13,9 @@ export const userValidation = Joi.object({
     mobile: Joi.string(),
     deliveryAddress: Joi.string(),
     businessAddress: Joi.string(),
+    pincode: Joi.string().length(6),
+    city: Joi.string(),
+    state: Joi.string(),
     role: Joi.number().valid(0, 1, 2, 3, 4),
 });
 
@@ -31,6 +34,9 @@ const userSchema = new Schema(
         mobile: { type: String, required: true },
         deliveryAddress: { type: String, default: "" },
         businessAddress: { type: String, default: "" },
+        pincode: { type: String, default: "" },
+        city: { type: String, default: "" },
+        state: { type: String, default: "" },
         rewardPoints: { type: Number },
         role: { type: Number, default: 1 }, // 0: Super Admin, 1: User, 2: Product Manager, 3: Order Manager
         isActive: { type: Boolean, default: true },

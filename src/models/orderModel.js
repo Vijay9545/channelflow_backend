@@ -21,6 +21,9 @@ const orderSchema = new Schema(
         gst: { type: String, default: "" },
         deliveryAddress: { type: String, required: true },
         businessAddress: { type: String, default: "" },
+        pincode: { type: String, required: true },
+        city: { type: String, required: true },
+        state: { type: String, required: true },
         order: { type: [orderItemSchema], required: true },
         rewardPoints: { type: Number },
         usePoint: { type: Number },
@@ -58,6 +61,19 @@ export const orderValidation = Joi.object({
     businessAddress: Joi.string().optional().allow("").max(250).messages({
         "string.base": "Business Address must be a string",
         "string.max": "Business Address cannot exceed 250 characters",
+    }),
+    pincode: Joi.string().length(6).required().messages({
+        "any.required": "Pincode is required",
+        "string.empty": "Pincode cannot be empty",
+        "string.length": "Pincode must be 6 digits",
+    }),
+    city: Joi.string().required().messages({
+        "any.required": "City is required",
+        "string.empty": "City cannot be empty",
+    }),
+    state: Joi.string().required().messages({
+        "any.required": "State is required",
+        "string.empty": "State cannot be empty",
     }),
     totalAmount: Joi.number().min(0).optional().messages({
         "any.required": "Total amount is required",
