@@ -17,7 +17,7 @@ if (process.env.FIREBASE_SERVICE_ACCOUNT) {
 }
 
 if (!serviceAccount) {
-    const serviceAccountPath = join(__dirname, "channel-flow-b4b92-firebase-adminsdk-fbsvc-cc1c1241f8.json");
+    const serviceAccountPath = join(__dirname, "channelflow-4e2da-firebase-adminsdk-fbsvc-9d3b7b047d.json");
     try {
         serviceAccount = JSON.parse(readFileSync(serviceAccountPath, "utf8"));
     } catch (fileError) {
