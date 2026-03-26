@@ -38,16 +38,16 @@ import { productModel } from "./src/models/productModel.js";
 
 app.get('/debug-db', async (req, res) => {
   try {
-    const categoryCount = await categoryModel.countDocuments();
-    const subCategoryCount = await subCategoryModel.countDocuments();
-    const productCount = await productModel.countDocuments();
+    const categories = await categoryModel.find();
+    const subCategories = await subCategoryModel.find();
+    const products = await productModel.find();
     res.json({
       success: true,
       database: mongoose.connection.name,
-      counts: {
-        categories: categoryCount,
-        subCategories: subCategoryCount,
-        products: productCount
+      data: {
+        categories,
+        subCategories,
+        products
       }
     });
   } catch (error) {
