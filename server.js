@@ -2,6 +2,7 @@
 import express, { json, urlencoded } from "express";
 import cors from "cors";
 import helmet from "helmet";
+import mongoose from "mongoose";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 import apiRouter from "./src/routes/index.js";
@@ -28,6 +29,30 @@ app.use("/api", apiRouter);
 
 app.get('/', (req, res) => {
   res.send(`<h1>Walcom to Molimor Channel Flow</h1>`);
+});
+
+// Temporary debug route to check DB counts
+import { categoryModel } from "./src/models/categoryModel.js";
+import { subCategoryModel } from "./src/models/subCategoryModel.js";
+import { productModel } from "./src/models/productModel.js";
+
+app.get('/debug-db', async (req, res) => {
+  try {
+    const categoryCount = await categoryModel.countDocuments();
+    const subCategoryCount = await subCategoryModel.countDocuments();
+    const productCount = await productModel.countDocuments();
+    res.json({
+      success: true,
+      database: mongoose.connection.name,
+      counts: {
+        categories: categoryCount,
+        subCategories: subCategoryCount,
+        products: productCount
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
 });
 
 cron.schedule("*/10 * * * *", async () => {
