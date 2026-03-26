@@ -21,6 +21,7 @@
   "homepage": "https://github.com/CodeSmith-infosoft/channel-flow-node#readme",
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1014.0",
+    "@shopify/shopify-api": "^13.0.0",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.5",
     "dotenv": "^17.2.1",
