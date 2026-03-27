@@ -19,7 +19,7 @@ if (process.env.FIREBASE_SERVICE_ACCOUNT) {
 }
 
 if (!serviceAccount) {
-    const serviceAccountPath = join(__dirname, "channelflow-4e2da-firebase-adminsdk-fbsvc-9d3b7b047d.json");
+    const serviceAccountPath = join(__dirname, "channelflow-4e2da-firebase-adminsdk-fbsvc-420dc4b749.json");
     try {
         console.log(`Searching for local Firebase config at: ${serviceAccountPath}`);
         serviceAccount = JSON.parse(readFileSync(serviceAccountPath, "utf8"));
