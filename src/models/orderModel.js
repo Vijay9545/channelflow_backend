@@ -96,7 +96,7 @@ export const orderValidation = Joi.object({
                 "number.base": "Quantity must be a number",
                 "number.min": "Quantity must be at least 1",
             }),
-            price: Joi.number().positive().optional().messages({
+            price: Joi.number().positive().required().messages({
                 "any.required": "Price is required",
                 "number.base": "Price must be a number",
                 "number.positive": "Price must be greater than 0",
