@@ -52,7 +52,7 @@ export async function placeOrder(req, res) {
         }
         
         await userModel.updateOne({ _id: userId }, {
-            $set: { name, deliveryAddress, businessAddress, company, mobile },
+            $set: { name, deliveryAddress, businessAddress, company, mobile, pincode, city, state },
             $inc: { rewardPoints: earnedPoints - usePoint },
         });
         
