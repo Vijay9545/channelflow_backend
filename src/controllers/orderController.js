@@ -20,41 +20,9 @@ export async function placeOrder(req, res) {
     }
     
     // TotalAmount provided by frontend is ignored for security.
-    let { 
-        name, company, mobile, gst, 
-        deliveryAddressId, businessAddressId,
-        deliveryAddress, businessAddress, 
-        pincode, city, state, 
-        order, usePoint = 0, paymentMethod, paymentId, paymentStatus 
-    } = value;
+    const { name, company, mobile, gst, deliveryAddress, businessAddress, pincode, city, state, order, usePoint = 0, paymentMethod, paymentId, paymentStatus } = value;
     
     try {
-        const user = await userModel.findById(userId);
-        if (!user) {
-            return response.error(res, resStatusCode.NOT_FOUND, "User not found");
-        }
-
-        // Handle Delivery Address ID
-        if (deliveryAddressId) {
-            const addr = user.addresses.id(deliveryAddressId);
-            if (addr) {
-                name = addr.name;
-                mobile = addr.mobile;
-                pincode = addr.pincode;
-                city = addr.city;
-                state = addr.state;
-                deliveryAddress = `${addr.addressLine}, ${addr.locality}${addr.landmark ? `, ${addr.landmark}` : ""}`;
-            }
-        }
-
-        // Handle Business Address ID
-        if (businessAddressId) {
-            const addr = user.addresses.id(businessAddressId);
-            if (addr) {
-                businessAddress = `${addr.addressLine}, ${addr.locality}${addr.landmark ? `, ${addr.landmark}` : ""}`;
-            }
-        }
-
         let calculatedTotalAmount = 0;
         const processedOrderItems = [];
 

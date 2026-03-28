@@ -37,23 +37,47 @@ const orderSchema = new Schema(
 export const orderModel = model(dbTableName.ORDER, orderSchema);
 
 export const orderValidation = Joi.object({
-    name: Joi.string().trim().min(2).max(100).optional().messages({
+    name: Joi.string().trim().min(2).max(100).required().messages({
+        "any.required": "Name is required",
         "string.empty": "Name cannot be empty",
         "string.min": "Name must be at least 2 characters",
         "string.max": "Name cannot exceed 100 characters",
     }),
-    company: Joi.string().trim().optional().max(150),
-    mobile: Joi.string().pattern(/^\+?\d{10,15}$/).optional().messages({
-        "string.pattern.base": "Mobile number must be 10-15 digits",
+    company: Joi.string().trim().optional().max(150).messages({
+        "string.base": "Company must be a string",
+        "string.max": "Company name cannot exceed 150 characters",
     }),
-    gst: Joi.string().pattern(/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/).allow(""),
-    deliveryAddressId: Joi.string().length(24).hex().optional(),
-    businessAddressId: Joi.string().length(24).hex().optional(),
-    deliveryAddress: Joi.string().optional().max(250),
-    businessAddress: Joi.string().optional().allow("").max(250),
-    pincode: Joi.string().length(6).optional(),
-    city: Joi.string().optional(),
-    state: Joi.string().optional(),
+    mobile: Joi.string().pattern(/^\+?\d{10,15}$/).required().messages({
+        "any.required": "Mobile number is required",
+        "string.empty": "Mobile number cannot be empty",
+        "string.pattern.base": "Mobile number must be 10-15 digits (e.g., 9876543210, +919876543210)",
+    }),
+    gst: Joi.string().pattern(/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/).allow("").messages({
+        "string.pattern.base": "GST number must be a valid GSTIN (e.g., 22AAAAA0000A1Z5)",
+    }),
+    deliveryAddress: Joi.string().required().max(250).messages({
+        "any.required": "Delivery Address is required",
+        "string.empty": "Delivery Address cannot be empty",
+        "string.base": "Delivery Address must be a string",
+        "string.max": "Delivery Address cannot exceed 250 characters",
+    }),
+    businessAddress: Joi.string().optional().allow("").max(250).messages({
+        "string.base": "Business Address must be a string",
+        "string.max": "Business Address cannot exceed 250 characters",
+    }),
+    pincode: Joi.string().length(6).required().messages({
+        "any.required": "Pincode is required",
+        "string.empty": "Pincode cannot be empty",
+        "string.length": "Pincode must be 6 digits",
+    }),
+    city: Joi.string().required().messages({
+        "any.required": "City is required",
+        "string.empty": "City cannot be empty",
+    }),
+    state: Joi.string().required().messages({
+        "any.required": "State is required",
+        "string.empty": "State cannot be empty",
+    }),
     totalAmount: Joi.number().min(0).optional().messages({
         "any.required": "Total amount is required",
         "number.base": "Total amount must be a number",
