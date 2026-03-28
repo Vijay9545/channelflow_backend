@@ -28,6 +28,9 @@ const orderSchema = new Schema(
         rewardPoints: { type: Number },
         usePoint: { type: Number },
         totalAmount: { type: Number, required: true },
+        paymentMethod: { type: String, default: "" },
+        paymentId: { type: String, default: "" },
+        paymentStatus: { type: String, default: "PENDING" },
         isActive: { type: Boolean, default: true },
     }, { timestamps: true },
 );
@@ -44,10 +47,10 @@ export const orderValidation = Joi.object({
         "string.base": "Company must be a string",
         "string.max": "Company name cannot exceed 150 characters",
     }),
-    mobile: Joi.string().pattern(/^\+\d{10,15}$/).required().messages({
+    mobile: Joi.string().pattern(/^\+?\d{10,15}$/).required().messages({
         "any.required": "Mobile number is required",
         "string.empty": "Mobile number cannot be empty",
-        "string.pattern.base": "Mobile number must be 10-15 digits (e.g., 9876543210, 919876543210)",
+        "string.pattern.base": "Mobile number must be 10-15 digits (e.g., 9876543210, +919876543210)",
     }),
     gst: Joi.string().pattern(/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/).allow("").messages({
         "string.pattern.base": "GST number must be a valid GSTIN (e.g., 22AAAAA0000A1Z5)",
@@ -82,6 +85,15 @@ export const orderValidation = Joi.object({
     }),
     usePoint: Joi.number().optional().messages({
         "number.base": "Use Point must be a number",
+    }),
+    paymentMethod: Joi.string().optional().allow("").messages({
+        "string.base": "Payment method must be a string",
+    }),
+    paymentId: Joi.string().optional().allow("").messages({
+        "string.base": "Payment ID must be a string",
+    }),
+    paymentStatus: Joi.string().optional().allow("").messages({
+        "string.base": "Payment status must be a string",
     }),
     order: Joi.array().items(
         Joi.object({

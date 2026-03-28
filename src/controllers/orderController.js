@@ -20,7 +20,7 @@ export async function placeOrder(req, res) {
     }
     
     // TotalAmount provided by frontend is ignored for security.
-    const { name, company, mobile, gst, deliveryAddress, businessAddress, pincode, city, state, order, usePoint = 0 } = value;
+    const { name, company, mobile, gst, deliveryAddress, businessAddress, pincode, city, state, order, usePoint = 0, paymentMethod, paymentId, paymentStatus } = value;
     
     try {
         let calculatedTotalAmount = 0;
@@ -72,7 +72,10 @@ export async function placeOrder(req, res) {
                 order: processedOrderItems, 
                 totalAmount: calculatedTotalAmount, 
                 rewardPoints: earnedPoints, 
-                usePoint 
+                usePoint,
+                paymentMethod,
+                paymentId,
+                paymentStatus
             }),
             cartModel.deleteMany({ userId }),
         ]);
