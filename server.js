@@ -1,4 +1,4 @@
-"use strict"
+import "dotenv/config";
 import express, { json, urlencoded } from "express";
 import cors from "cors";
 import helmet from "helmet";
@@ -7,9 +7,6 @@ import { fileURLToPath } from "url";
 import apiRouter from "./src/routes/index.js";
 import connectDB from "./db/dbconnect.js";
 import cron from "node-cron";
-
-const dotenv = await import("dotenv");
-dotenv.config({ quiet: true });
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
