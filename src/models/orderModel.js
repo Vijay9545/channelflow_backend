@@ -25,9 +25,13 @@ const orderSchema = new Schema(
         city: { type: String, required: true },
         state: { type: String, required: true },
         order: { type: [orderItemSchema], required: true },
-        rewardPoints: { type: Number },
-        usePoint: { type: Number },
+        rewardPoints: { type: Number, default: 0 },
+        usePoint: { type: Number, default: 0 },
+        shippingFee: { type: Number, default: 0 },
+        taxAmount: { type: Number, default: 0 },
+        subtotal: { type: Number, required: true },
         totalAmount: { type: Number, required: true },
+        pointsRedeemed: { type: Number, default: 0 },
         paymentMethod: { type: String, default: "" },
         paymentId: { type: String, default: "" },
         paymentStatus: { type: String, default: "PENDING" },
@@ -83,8 +87,23 @@ export const orderValidation = Joi.object({
         "number.base": "Total amount must be a number",
         "number.min": "Total amount cannot be negative",
     }),
+    subtotal: Joi.number().min(0).optional().messages({
+        "number.base": "Subtotal must be a number",
+        "number.min": "Subtotal cannot be negative",
+    }),
+    shippingFee: Joi.number().min(0).optional().messages({
+        "number.base": "Shipping fee must be a number",
+        "number.min": "Shipping fee cannot be negative",
+    }),
+    taxAmount: Joi.number().min(0).optional().messages({
+        "number.base": "Tax amount must be a number",
+        "number.min": "Tax amount cannot be negative",
+    }),
     usePoint: Joi.number().optional().messages({
         "number.base": "Use Point must be a number",
+    }),
+    pointsRedeemed: Joi.number().optional().messages({
+        "number.base": "Points redeemed must be a number",
     }),
     paymentMethod: Joi.string().optional().allow("").messages({
         "string.base": "Payment method must be a string",

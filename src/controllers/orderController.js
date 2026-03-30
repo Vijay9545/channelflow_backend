@@ -19,14 +19,21 @@ export async function placeOrder(req, res) {
         return response.error(res, resStatusCode.CLIENT_ERROR, error.details.map(d => d.message).join(", "));
     }
     
-    // TotalAmount provided by frontend is ignored for security.
-    const { name, company, mobile, gst, deliveryAddress, businessAddress, pincode, city, state, order, usePoint = 0, paymentMethod, paymentId, paymentStatus } = value;
+    // Extract values from validated request body
+    const { 
+        name, company, mobile, gst, deliveryAddress, businessAddress, pincode, city, state, order, 
+        usePoint = 0, pointsRedeemed = 0, shippingFee = 0, taxAmount = 0, subtotal: frontendSubtotal,
+        paymentMethod, paymentId, paymentStatus 
+    } = value;
+    
+    // Choose which points value to use (prioritize pointsRedeemed)
+    const activePointsRedeemed = pointsRedeemed || usePoint;
     
     try {
-        let calculatedTotalAmount = 0;
+        let calculatedSubtotal = 0;
         const processedOrderItems = [];
 
-        // Fetch products and use prices provided by frontend
+        // Fetch products and verify prices
         for (const item of order) {
             const product = await productModel.findById(item.productId);
             if (!product) {
@@ -34,7 +41,7 @@ export async function placeOrder(req, res) {
             }
 
             const itemFinalPrice = (item.price || 0) * item.qty;
-            calculatedTotalAmount += itemFinalPrice;
+            calculatedSubtotal += itemFinalPrice;
 
             processedOrderItems.push({
                 ...item,
@@ -42,18 +49,22 @@ export async function placeOrder(req, res) {
             });
         }
 
+        // Final paid amount calculation
+        const calculatedTotalAmount = (calculatedSubtotal + shippingFee + taxAmount) - activePointsRedeemed;
+
         const orderId = uuidv4();
         const today = new Date();
         const reward = await rewardModel.findOne({ isActive: true, fromDate: { $lte: today }, toDate: { $gte: today } }).lean();
 
         let earnedPoints = 0;
         if (reward) {
-            earnedPoints = Math.floor((calculatedTotalAmount / 100) * reward.point);
+            // Earn points based on subtotal (before tax and shipping)
+            earnedPoints = Math.floor((calculatedSubtotal / 100) * reward.point);
         }
         
         await userModel.updateOne({ _id: userId }, {
             $set: { name, deliveryAddress, businessAddress, company, mobile, pincode, city, state },
-            $inc: { rewardPoints: earnedPoints - usePoint },
+            $inc: { rewardPoints: earnedPoints - activePointsRedeemed },
         });
         
         const [newOrder] = await Promise.all([
@@ -70,9 +81,13 @@ export async function placeOrder(req, res) {
                 city,
                 state,
                 order: processedOrderItems, 
+                subtotal: calculatedSubtotal,
+                shippingFee,
+                taxAmount,
                 totalAmount: calculatedTotalAmount, 
                 rewardPoints: earnedPoints, 
-                usePoint,
+                usePoint: activePointsRedeemed,
+                pointsRedeemed: activePointsRedeemed,
                 paymentMethod,
                 paymentId,
                 paymentStatus
@@ -110,7 +125,7 @@ export async function getOrderList(req, res) {
                     mrp: p?.variants?.[type]?.mrp ?? null,
                 };
             });
-            return { ...order, order: orderItems, totalAmount };
+            return { ...order, order: orderItems, totalAmount: order.totalAmount, subtotal: order.subtotal, shippingFee: order.shippingFee, taxAmount: order.taxAmount, pointsRedeemed: order.pointsRedeemed };
         });
         const grandTotal = result.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
         return response.success(res, resStatusCode.SUCCESS, resMessage.ACTION_COMPLETE, { orders: result, grandTotal });
