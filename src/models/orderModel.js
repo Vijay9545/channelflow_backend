@@ -29,6 +29,7 @@ const orderSchema = new Schema(
         usePoint: { type: Number, default: 0 },
         shippingFee: { type: Number, default: 0 },
         taxAmount: { type: Number, default: 0 },
+        tax: { type: Number, default: 0 },
         subtotal: { type: Number, required: true },
         totalAmount: { type: Number, required: true },
         pointsRedeemed: { type: Number, default: 0 },
@@ -98,6 +99,10 @@ export const orderValidation = Joi.object({
     taxAmount: Joi.number().min(0).optional().messages({
         "number.base": "Tax amount must be a number",
         "number.min": "Tax amount cannot be negative",
+    }),
+    tax: Joi.number().min(0).optional().messages({
+        "number.base": "Tax must be a number",
+        "number.min": "Tax cannot be negative",
     }),
     usePoint: Joi.number().optional().messages({
         "number.base": "Use Point must be a number",

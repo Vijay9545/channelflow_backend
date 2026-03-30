@@ -19,15 +19,15 @@ export async function placeOrder(req, res) {
         return response.error(res, resStatusCode.CLIENT_ERROR, error.details.map(d => d.message).join(", "));
     }
     
-    // Extract values from validated request body
     const { 
         name, company, mobile, gst, deliveryAddress, businessAddress, pincode, city, state, order, 
-        usePoint = 0, pointsRedeemed = 0, shippingFee = 0, taxAmount = 0, subtotal: frontendSubtotal,
+        usePoint = 0, pointsRedeemed = 0, shippingFee = 0, taxAmount = 0, tax = 0, subtotal: frontendSubtotal,
         paymentMethod, paymentId, paymentStatus 
     } = value;
     
-    // Choose which points value to use (prioritize pointsRedeemed)
+    // Choose which points value and tax value to use
     const activePointsRedeemed = pointsRedeemed || usePoint;
+    const activeTaxAmount = tax || taxAmount;
     
     try {
         let calculatedSubtotal = 0;
@@ -50,7 +50,7 @@ export async function placeOrder(req, res) {
         }
 
         // Final paid amount calculation
-        const calculatedTotalAmount = (calculatedSubtotal + shippingFee + taxAmount) - activePointsRedeemed;
+        const calculatedTotalAmount = (calculatedSubtotal + shippingFee + activeTaxAmount) - activePointsRedeemed;
 
         const orderId = uuidv4();
         const today = new Date();
@@ -83,7 +83,8 @@ export async function placeOrder(req, res) {
                 order: processedOrderItems, 
                 subtotal: calculatedSubtotal,
                 shippingFee,
-                taxAmount,
+                taxAmount: activeTaxAmount,
+                tax: activeTaxAmount,
                 totalAmount: calculatedTotalAmount, 
                 rewardPoints: earnedPoints, 
                 usePoint: activePointsRedeemed,
@@ -125,7 +126,7 @@ export async function getOrderList(req, res) {
                     mrp: p?.variants?.[type]?.mrp ?? null,
                 };
             });
-            return { ...order, order: orderItems, totalAmount: order.totalAmount, subtotal: order.subtotal, shippingFee: order.shippingFee, taxAmount: order.taxAmount, pointsRedeemed: order.pointsRedeemed };
+            return { ...order, order: orderItems, totalAmount: order.totalAmount, subtotal: order.subtotal, shippingFee: order.shippingFee, taxAmount: order.taxAmount, tax: order.tax, pointsRedeemed: order.pointsRedeemed };
         });
         const grandTotal = result.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
         return response.success(res, resStatusCode.SUCCESS, resMessage.ACTION_COMPLETE, { orders: result, grandTotal });
