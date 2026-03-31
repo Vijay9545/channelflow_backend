@@ -9,6 +9,7 @@ const orderItemSchema = new mongoose.Schema(
         price: { type: Number, required: true },
         finalPrice: { type: Number, required: true },
         type: { type: String, required: true },
+        title: { type: String, default: "" },
     }, { _id: false },
 );
 const orderSchema = new Schema(
@@ -36,6 +37,8 @@ const orderSchema = new Schema(
         paymentMethod: { type: String, default: "" },
         paymentId: { type: String, default: "" },
         paymentStatus: { type: String, default: "PENDING" },
+        shiprocketOrderId: { type: String, default: null },
+        shiprocketShipmentId: { type: String, default: null },
         isActive: { type: Boolean, default: true },
     }, { timestamps: true },
 );
@@ -145,6 +148,9 @@ export const orderValidation = Joi.object({
             type: Joi.string().required().messages({
                 "any.required": "Type is required",
                 "string.base": "Type must be a string",
+            }),
+            title: Joi.string().optional().allow("").messages({
+                "string.base": "Title must be a string",
             }),
         }),
     ),

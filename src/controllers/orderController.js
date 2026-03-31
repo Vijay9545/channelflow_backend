@@ -9,6 +9,7 @@ import { cartModel } from "../models/cartModel.js";
 import { rewardModel } from "../models/rewardModel.js";
 import { productModel } from "../models/productModel.js";
 import { getPriceByQty } from "../utils/pricing.js";
+import { createShiprocketOrder, trackShiprocketShipment } from "../utils/shiprocket.js";
 const SERVER_ERROR_STATUS = resStatusCode.INTERNAL_SERVER_ERROR;
 const SERVER_ERROR_MESSAGE = resMessage.INTERNAL_SERVER_ERROR;
 
@@ -45,6 +46,7 @@ export async function placeOrder(req, res) {
 
             processedOrderItems.push({
                 ...item,
+                title: product.title,
                 finalPrice: itemFinalPrice
             });
         }
@@ -95,6 +97,24 @@ export async function placeOrder(req, res) {
             }),
             cartModel.deleteMany({ userId }),
         ]);
+        
+        // Trigger Shiprocket Order Creation (Asynchronous)
+        // We do this after successful DB save
+        try {
+            const shiprocketRes = await createShiprocketOrder(newOrder);
+            if (shiprocketRes.success) {
+                await orderModel.updateOne(
+                    { _id: newOrder._id },
+                    { 
+                        shiprocketOrderId: shiprocketRes.shiprocketOrder.order_id,
+                        shiprocketShipmentId: shiprocketRes.shiprocketOrder.shipment_id
+                    }
+                );
+                console.log(`🚀 Shiprocket order updated for ${orderId}`);
+            }
+        } catch (srErr) {
+            console.error("⚠️ Shiprocket integration failed (non-blocking):", srErr);
+        }
         
         return response.success(res, resStatusCode.ACTION_COMPLETE, resMessage.ACTION_COMPLETE, { ...newOrder.toObject(), earnedPoints });
     } catch (err) {
@@ -174,6 +194,30 @@ export async function getAllOrders(req, res) {
         return response.success(res, resStatusCode.ACTION_COMPLETE, resMessage.ACTION_COMPLETE, result);
     } catch (err) {
         console.error("getAllOrders error:", err);
+        return response.error(res, SERVER_ERROR_STATUS, SERVER_ERROR_MESSAGE);
+    }
+}
+
+export async function trackOrder(req, res) {
+    const { id } = req.params;
+    try {
+        const order = await orderModel.findById(id);
+        if (!order) {
+            return response.error(res, resStatusCode.NOT_FOUND, "Order not found");
+        }
+
+        if (!order.shiprocketShipmentId) {
+            return response.error(res, resStatusCode.CLIENT_ERROR, "Shipment ID not found for this order. It might not have been processed through Shiprocket.");
+        }
+
+        const result = await trackShiprocketShipment(order.shiprocketShipmentId);
+        if (result.success) {
+            return response.success(res, resStatusCode.SUCCESS, "Tracking data fetched", result.trackingData);
+        } else {
+            return response.error(res, resStatusCode.BAD_REQUEST, result.error || "Failed to fetch tracking data");
+        }
+    } catch (err) {
+        console.error("trackOrder error:", err);
         return response.error(res, SERVER_ERROR_STATUS, SERVER_ERROR_MESSAGE);
     }
 }
