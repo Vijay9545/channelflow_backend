@@ -37,4 +37,10 @@ export const idValidation = Joi.object({
     }),
 });
 
-
+export const calculateValidation = Joi.object({
+    subtotal: Joi.number().min(0).required().messages({
+        "number.base": "Subtotal must be a number",
+        "number.min": "Subtotal cannot be negative",
+        "any.required": "Subtotal is required",
+    }),
+});
