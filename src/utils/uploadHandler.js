@@ -5,7 +5,9 @@ import dotenv from "dotenv";
 dotenv.config();
 import fs from 'fs';
 
-const isProduction = process.env.ENVIRONMENT === 'production';
+const isProduction = process.env.ENVIRONMENT?.trim().replace(/['"]/g, '') === 'production';
+const forceS3 = process.env.UPLOAD_TO_S3?.trim().replace(/['"]/g, '') === 'true';
+
 export let s3;
 if (process.env.AWS_REGION && process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
     s3 = new S3Client({
@@ -71,7 +73,7 @@ export const createS3Uploader = ({ folderName, filePrefix = '', fieldType = 'sin
                 req.uploadedImages = [];
                 for (const [key, fileArray] of Object.entries(files)) {
                     for (const file of fileArray) {
-                        if (isProduction) {
+                        if (isProduction || forceS3) {
                             const timestamp = Date.now();
                             const first4Chars = file.originalname.slice(0, 4);
                             const ext = path.extname(file.originalname);
