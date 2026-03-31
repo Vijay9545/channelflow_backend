@@ -25,6 +25,7 @@ export const rewardValidation = Joi.object({
         "date.base": "To Date must be a valid date",
         "any.required": "To Date is required",
     }),
+    isActive: Joi.boolean().optional(),
 });
 
 export const idValidation = Joi.object({
