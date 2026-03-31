@@ -30,7 +30,16 @@ export const getPromoPopup = async (req, res) => {
 // @route   POST /api/promotions/popup
 export const updatePromoPopup = async (req, res) => {
     try {
-        const { active, targetScreen } = req.body;
+        console.log('[Promotion] Received request body:', req.body);
+        console.log('[Promotion] Uploaded images:', req.uploadedImages);
+
+        const { targetScreen } = req.body;
+        
+        // Explicitly cast 'active' to boolean (FormData sends strings)
+        let active;
+        if (req.body.active !== undefined) {
+            active = req.body.active === 'true' || req.body.active === true;
+        }
         
         let imageUrl = req.body.imageUrl;
         // Handle image upload if a new file is provided
@@ -42,7 +51,7 @@ export const updatePromoPopup = async (req, res) => {
 
         if (promo) {
             // Update existing
-            promo.active = active !== undefined ? active : promo.active;
+            if (active !== undefined) promo.active = active;
             promo.imageUrl = imageUrl || promo.imageUrl;
             promo.targetScreen = targetScreen || promo.targetScreen;
             await promo.save();
@@ -59,10 +68,11 @@ export const updatePromoPopup = async (req, res) => {
             await promo.save();
         }
 
+        console.log('[Promotion] Updated successfully:', promo);
         return response.success(res, resStatusCode.ACTION_COMPLETE, resMessage.ACTION_COMPLETE, promo);
 
     } catch (error) {
         console.error("Error updating promotion popup:", error);
-        return response.error(res, resStatusCode.INTERNAL_SERVER_ERROR, resMessage.INTERNAL_SERVER_ERROR, error);
+        return response.error(res, resStatusCode.INTERNAL_SERVER_ERROR, resMessage.INTERNAL_SERVER_ERROR, error.message || error);
     }
 };
