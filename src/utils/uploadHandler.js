@@ -5,20 +5,31 @@ import dotenv from "dotenv";
 dotenv.config();
 import fs from 'fs';
 
-const isProduction = process.env.ENVIRONMENT?.trim().replace(/['"]/g, '') === 'production';
-const forceS3 = process.env.UPLOAD_TO_S3?.trim().replace(/['"]/g, '') === 'true';
+// Helper to strip quotes from environment variables
+const stripQuotes = (str) => {
+    if (!str) return str;
+    return str.trim().replace(/^['"]|['"]$/g, '');
+};
+
+const isProduction = stripQuotes(process.env.ENVIRONMENT) === 'production';
+const forceS3 = stripQuotes(process.env.UPLOAD_TO_S3) === 'true';
 
 export let s3;
-if (process.env.AWS_REGION && process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
+const awsRegion = stripQuotes(process.env.AWS_REGION);
+const awsAccessKey = stripQuotes(process.env.AWS_ACCESS_KEY_ID);
+const awsSecretKey = stripQuotes(process.env.AWS_SECRET_ACCESS_KEY);
+
+if (awsRegion && awsAccessKey && awsSecretKey) {
     s3 = new S3Client({
-        region: process.env.AWS_REGION,
+        region: awsRegion,
         credentials: {
-            accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-            secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+            accessKeyId: awsAccessKey,
+            secretAccessKey: awsSecretKey,
         },
     });
+    console.log('[S3] Client initialized successfully for region:', awsRegion);
 } else {
-    console.warn('AWS credentials or region missing. S3 uploads will not work.');
+    console.warn('[S3] AWS credentials or region missing. S3 uploads will only work if ENVIRONMENT=production or UPLOAD_TO_S3=true and credentials are provided.');
 }
 
 const saveLocally = async (file, folderName, filePrefix, fieldname) => {
@@ -34,8 +45,8 @@ const saveLocally = async (file, folderName, filePrefix, fieldname) => {
 
     const filePath = `${localFolder}/${filename}`;
     fs.writeFileSync(filePath, file.buffer);
-    const baseUrl = process.env.BASE_URL || `http://localhost:${process.env.PORT || 8001}`;
-    console.log('localUrl', `${baseUrl}/${folderName}/${filename}`, '::::', 'field:', fieldname);
+    const baseUrl = stripQuotes(process.env.BASE_URL) || `http://localhost:${process.env.PORT || 8001}`;
+    console.log('[Local Upload] Saved to:', `${baseUrl}/${folderName}/${filename}`);
     return {
         field: fieldname,
         fileName: filename,
@@ -47,7 +58,7 @@ const saveLocally = async (file, folderName, filePrefix, fieldname) => {
 const storage = multer.memoryStorage();
 export const createS3Uploader = ({ folderName, filePrefix = '', fieldType = 'single', fieldName, customFields = [], fileSizeMB, } = {}) => {
     const limits = {
-        fileSize: fileSizeMB * 1024 * 1024,
+        fileSize: (fileSizeMB || 5) * 1024 * 1024,
     };
     const upload = multer({
         storage,
@@ -70,46 +81,57 @@ export const createS3Uploader = ({ folderName, filePrefix = '', fieldType = 'sin
         async (req, res, next) => {
             try {
                 const files = req.files || (req.file ? { [fieldName]: [req.file] } : {});
+                if (!req.file && (!req.files || Object.keys(req.files).length === 0)) {
+                    console.log('[Upload Handler] No files found in request');
+                    return next();
+                }
+
                 req.uploadedImages = [];
+                const bucketName = stripQuotes(process.env.AWS_BUCKET_NAME);
+
                 for (const [key, fileArray] of Object.entries(files)) {
                     for (const file of fileArray) {
                         if (isProduction || forceS3) {
+                            console.log('[S3 Upload] Attempting upload for:', file.originalname);
                             const timestamp = Date.now();
                             const first4Chars = file.originalname.slice(0, 4);
                             const ext = path.extname(file.originalname);
-                            const isBlob = ext === '.blob'; // or use mimetype check if needed
-                            const finalExt = isBlob ? '.jpg' : ext; // Default to .jpg if it's a blob
-                            const finalMime = isBlob ? 'image/jpeg' : file.mimetype; // Default to image/jpeg if it's a blob
+                            const isBlob = ext === '.blob' || !ext;
+                            const finalExt = isBlob ? '.jpg' : ext;
+                            const finalMime = isBlob ? 'image/jpeg' : file.mimetype;
                             const filename = `${filePrefix}-${timestamp}-${first4Chars}${finalExt}`;
                             const s3Key = `${folderName}/${filename}`;
 
                             if (!s3) {
-                                throw new Error("S3 client not initialized. Check your AWS credentials in .env");
+                                console.error('[S3 Upload] S3 client not initialized. Check your ENV variables.');
+                                throw new Error("S3 client not initialized. Check your AWS credentials in Render environment variables.");
+                            }
+
+                            if (!bucketName) {
+                                console.error('[S3 Upload] AWS_BUCKET_NAME is missing.');
+                                throw new Error("AWS_BUCKET_NAME is missing in environment variables.");
                             }
 
                             const command = new PutObjectCommand({
-                                Bucket: process.env.AWS_BUCKET_NAME,
+                                Bucket: bucketName,
                                 Key: s3Key,
                                 Body: file.buffer,
-                                ContentType: finalMime, //file.mimetype, //ext,
+                                ContentType: finalMime,
                                 ContentDisposition: "inline",
                             });
-                            await s3.send(command);
-                            const s3Url = `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${s3Key}`;
-                            // const baseUrl = process.env.BASE_URL || `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com`;
 
-                            // const s3Url = `${baseUrl}/${s3Key}`;
+                            await s3.send(command);
+                            const s3Url = `https://${bucketName}.s3.${awsRegion || 'ap-south-1'}.amazonaws.com/${s3Key}`;
 
                             req.uploadedImages.push({
                                 field: key,
-                                index: key.split('[')?.[1]?.[0],
+                                index: key.includes('[') ? key.split('[')?.[1]?.[0] : undefined,
                                 fileName: filename,
                                 originalName: file.originalname,
                                 s3Url,
                             });
-                            console.log('[S3 Upload] uploadedImages =>', req.uploadedImages);
+                            console.log('[S3 Upload] Success:', s3Url);
                         } else {
-                            console.log(file)
                             const localFile = await saveLocally(file, folderName, filePrefix, file.fieldname);
                             req.uploadedImages.push({
                                 field: key,
@@ -120,7 +142,9 @@ export const createS3Uploader = ({ folderName, filePrefix = '', fieldType = 'sin
                 };
                 next();
             } catch (error) {
-                console.error('[S3 Upload] Error occurred during file upload:', error);
+                console.error('[Upload Handler] Critical Error:', error.message);
+                // Attach status to error for global handler
+                error.status = 500;
                 next(error);
             };
         },

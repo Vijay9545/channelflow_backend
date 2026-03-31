@@ -27,6 +27,19 @@ app.get('/', (req, res) => {
   res.send(`<h1>Walcom to Molimor Channel Flow</h1>`);
 });
 
+// Global Error Handler - Catch all errors and return JSON
+app.use((err, req, res, next) => {
+  console.error('[Global Error Handler] Error:', err);
+  const status = err.status || 500;
+  
+  return res.status(status).json({
+    success: false,
+    status: status,
+    message: err.message || "An unexpected error occurred.",
+    data: (process.env.ENVIRONMENT?.includes('production')) ? {} : err
+  });
+});
+
 cron.schedule("*/10 * * * *", async () => {
   try {
     const response = await fetch("https://channel-flow.onrender.com/api/user/serverNotSleep");
