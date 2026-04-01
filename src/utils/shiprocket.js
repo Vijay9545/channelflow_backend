@@ -231,3 +231,35 @@ export const getShippingRates = async (data) => {
         return { success: false, error: error.message };
     }
 };
+
+/**
+ * Cancel Order in Shiprocket
+ * @param {string[]} ids - Array of Shiprocket order IDs
+ * @returns {Promise<object>}
+ */
+export const cancelShiprocketOrder = async (ids) => {
+    try {
+        if (!ids || ids.length === 0) return { success: true };
+
+        const token = await getShiprocketToken();
+        if (!token) throw new Error("Could not authenticate with Shiprocket");
+
+        const response = await axios.post(
+            "https://apiv2.shiprocket.in/v1/external/orders/cancel",
+            { ids },
+            { headers: { Authorization: `Bearer ${token}` } }
+        );
+
+        console.log("✅ Shiprocket Order Cancelled:", response.data);
+        return {
+            success: response.data.status_code === 200,
+            data: response.data,
+        };
+    } catch (error) {
+        console.error("❌ Shiprocket Order Cancellation Error:", error.response?.data || error.message);
+        return {
+            success: false,
+            error: error.response?.data || error.message,
+        };
+    }
+};

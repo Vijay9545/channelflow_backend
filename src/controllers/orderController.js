@@ -9,7 +9,7 @@ import { cartModel } from "../models/cartModel.js";
 import { rewardModel } from "../models/rewardModel.js";
 import { productModel } from "../models/productModel.js";
 import { getPriceByQty } from "../utils/pricing.js";
-import { createShiprocketOrder, trackShiprocketShipment, getShippingRates } from "../utils/shiprocket.js";
+import { createShiprocketOrder, trackShiprocketShipment, getShippingRates, cancelShiprocketOrder } from "../utils/shiprocket.js";
 const SERVER_ERROR_STATUS = resStatusCode.INTERNAL_SERVER_ERROR;
 const SERVER_ERROR_MESSAGE = resMessage.INTERNAL_SERVER_ERROR;
 
@@ -262,10 +262,76 @@ export async function getShippingRate(req, res) {
         if (result.success) {
             return response.success(res, resStatusCode.SUCCESS, "Shipping rate fetched", result);
         } else {
-            return response.error(res, resStatusCode.BAD_REQUEST, result.message || result.error);
+            return response.error(res, resStatusCode.CLIENT_ERROR, result.message || result.error);
         }
     } catch (err) {
         console.error("getShippingRate error:", err);
+        return response.error(res, SERVER_ERROR_STATUS, SERVER_ERROR_MESSAGE);
+    }
+}
+
+export async function cancelOrder(req, res) {
+    const { id } = req.params;
+    const { cancelReason } = req.body;
+    const userId = req.user?._id?.toString();
+
+    if (!cancelReason) {
+        return response.error(res, resStatusCode.CLIENT_ERROR, "Cancellation reason is required");
+    }
+
+    try {
+        const order = await orderModel.findOne({ _id: id, userId });
+        if (!order) {
+            return response.error(res, resStatusCode.NOT_FOUND, "Order not found");
+        }
+
+        // Check if order is eligible for cancellation
+        if (['CANCELLED', 'SHIPPED', 'DELIVERED'].includes(order.orderStatus)) {
+            return response.error(res, resStatusCode.CLIENT_ERROR, `Order cannot be cancelled as it is already ${order.orderStatus.toLowerCase()}`);
+        }
+
+        // 1. Reverse Reward Points
+        const user = await userModel.findById(userId);
+        if (user) {
+            // Points used for discount should be returned
+            const pointsToReturn = order.pointsRedeemed || order.usePoint || 0;
+            // Points earned from this purchase should be revoked
+            const pointsToRevoke = order.rewardPoints || 0;
+
+            const netChange = pointsToReturn - pointsToRevoke;
+            
+            await userModel.updateOne(
+                { _id: userId },
+                { $inc: { rewardPoints: netChange } }
+            );
+            console.log(`♻️ Points Reversal: Returned ${pointsToReturn}, Revoked ${pointsToRevoke} for user ${userId}`);
+        }
+
+        // 2. Update Order Status
+        order.orderStatus = 'CANCELLED';
+        order.cancelReason = cancelReason;
+        order.cancelledAt = new Date();
+        await order.save();
+
+        // 3. Cancel in Shiprocket if synced
+        if (order.shiprocketOrderId) {
+            try {
+                // Shiprocket expects an array of IDs
+                await cancelShiprocketOrder([order.shiprocketOrderId]);
+                console.log(`📡 Shiprocket cancellation sent for order ${order.orderId}`);
+            } catch (srErr) {
+                console.error("⚠️ Shiprocket cancellation failed:", srErr);
+            }
+        }
+
+        return response.success(res, resStatusCode.SUCCESS, "Order cancelled successfully", {
+            orderId: order.orderId,
+            status: order.orderStatus,
+            cancelledAt: order.cancelledAt
+        });
+
+    } catch (err) {
+        console.error("cancelOrder error:", err);
         return response.error(res, SERVER_ERROR_STATUS, SERVER_ERROR_MESSAGE);
     }
 }

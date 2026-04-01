@@ -40,6 +40,13 @@ const orderSchema = new Schema(
         shiprocketOrderId: { type: String, default: null },
         shiprocketShipmentId: { type: String, default: null },
         estimatedDelivery: { type: String, default: "" },
+        orderStatus: { 
+            type: String, 
+            enum: ['PENDING', 'PLACED', 'CANCELLED', 'SHIPPED', 'DELIVERED'], 
+            default: 'PLACED' 
+        },
+        cancelReason: { type: String, default: null },
+        cancelledAt: { type: Date, default: null },
         isActive: { type: Boolean, default: true },
     }, { timestamps: true },
 );

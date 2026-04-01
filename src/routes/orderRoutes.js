@@ -16,5 +16,6 @@ router.get("/getOrderList", validateAccessToken, getOrderList);
 router.get("/getAllOrders", validateAccessToken, authorizeRoles(0, 3), getAllOrders);
 router.get("/getOrder/:id", validateAccessToken, getOrderById);
 router.get("/track/:id", validateAccessToken, trackOrder);
+router.post("/cancel/:id", validateAccessToken, cancelOrder);
 
 export default router;
