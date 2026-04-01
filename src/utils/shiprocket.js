@@ -10,9 +10,11 @@ export const getShiprocketToken = async () => {
         const password = process.env.SHIPROCKET_PASSWORD;
 
         if (!email || !password) {
-            console.error("❌ SHIPROCKET_EMAIL or SHIPROCKET_PASSWORD not set in .env");
+            console.error("❌ SHIPROCKET_EMAIL or SHIPROCKET_PASSWORD not set in .env", { email: email?.length, password: password?.length });
             return null;
         }
+
+        console.log("📡 Attempting Shiprocket Login for:", email);
 
         const response = await axios.post("https://apiv2.shiprocket.in/v1/external/auth/login", {
             email,
@@ -25,6 +27,9 @@ export const getShiprocketToken = async () => {
         return null;
     } catch (error) {
         console.error("❌ Shiprocket Auth Error:", error.response?.data || error.message);
+        if (error.response?.data) {
+             console.error("❌ Full Shiprocket Auth Error Response:", JSON.stringify(error.response.data, null, 2));
+        }
         return null;
     }
 };
