@@ -39,6 +39,7 @@ const orderSchema = new Schema(
         paymentStatus: { type: String, default: "PENDING" },
         shiprocketOrderId: { type: String, default: null },
         shiprocketShipmentId: { type: String, default: null },
+        estimatedDelivery: { type: String, default: "" },
         isActive: { type: Boolean, default: true },
     }, { timestamps: true },
 );
@@ -121,6 +122,9 @@ export const orderValidation = Joi.object({
     }),
     paymentStatus: Joi.string().optional().allow("").messages({
         "string.base": "Payment status must be a string",
+    }),
+    estimatedDelivery: Joi.string().optional().allow("").messages({
+        "string.base": "Estimated delivery must be a string",
     }),
     order: Joi.array().items(
         Joi.object({

@@ -9,9 +9,17 @@ import { cartModel } from "../models/cartModel.js";
 import { rewardModel } from "../models/rewardModel.js";
 import { productModel } from "../models/productModel.js";
 import { getPriceByQty } from "../utils/pricing.js";
-import { createShiprocketOrder, trackShiprocketShipment } from "../utils/shiprocket.js";
+import { createShiprocketOrder, trackShiprocketShipment, getShippingRates } from "../utils/shiprocket.js";
 const SERVER_ERROR_STATUS = resStatusCode.INTERNAL_SERVER_ERROR;
 const SERVER_ERROR_MESSAGE = resMessage.INTERNAL_SERVER_ERROR;
+
+/**
+ * Strips "(Estimated Delivery: ...)" strings from the end of addresses
+ */
+function stripDeliveryEstimate(address) {
+    if (!address) return "";
+    return address.replace(/\n?\(Estimated Delivery:.*?\)/g, "").trim();
+}
 
 export async function placeOrder(req, res) {
     const userId = req.user._id.toString();
@@ -23,7 +31,7 @@ export async function placeOrder(req, res) {
     const { 
         name, company, mobile, gst, deliveryAddress, businessAddress, pincode, city, state, order, 
         usePoint = 0, pointsRedeemed = 0, shippingFee = 0, taxAmount = 0, tax = 0, subtotal: frontendSubtotal,
-        paymentMethod, paymentId, paymentStatus 
+        paymentMethod, paymentId, paymentStatus, estimatedDelivery = "" 
     } = value;
     
     // Choose which points value and tax value to use
@@ -64,8 +72,22 @@ export async function placeOrder(req, res) {
             earnedPoints = Math.floor((calculatedSubtotal / 100) * reward.point);
         }
         
+        // Clean existing pollution from addresses
+        const cleanDeliveryAddress = stripDeliveryEstimate(deliveryAddress);
+        const cleanBusinessAddress = stripDeliveryEstimate(businessAddress);
+
+        // Sanity check: If businessAddress looks like a delivery estimate (e.g. "1-2"), 
+        // and we have an estimatedDelivery value, we should NOT overwrite the user's business address with it.
+        const updatedUserData = { name, deliveryAddress: cleanDeliveryAddress, company, mobile, pincode, city, state };
+        if (cleanBusinessAddress && !/^\d+-\d+/.test(cleanBusinessAddress)) {
+            updatedUserData.businessAddress = cleanBusinessAddress;
+        }
+        if (estimatedDelivery) {
+            updatedUserData.estimatedDelivery = estimatedDelivery;
+        }
+
         await userModel.updateOne({ _id: userId }, {
-            $set: { name, deliveryAddress, businessAddress, company, mobile, pincode, city, state },
+            $set: updatedUserData,
             $inc: { rewardPoints: earnedPoints - activePointsRedeemed },
         });
         
@@ -77,8 +99,8 @@ export async function placeOrder(req, res) {
                 company, 
                 mobile, 
                 gst, 
-                deliveryAddress,
-                businessAddress,
+                deliveryAddress: cleanDeliveryAddress,
+                businessAddress: cleanBusinessAddress,
                 pincode,
                 city,
                 state,
@@ -93,7 +115,8 @@ export async function placeOrder(req, res) {
                 pointsRedeemed: activePointsRedeemed,
                 paymentMethod,
                 paymentId,
-                paymentStatus
+                paymentStatus,
+                estimatedDelivery
             }),
             cartModel.deleteMany({ userId }),
         ]);
@@ -218,6 +241,31 @@ export async function trackOrder(req, res) {
         }
     } catch (err) {
         console.error("trackOrder error:", err);
+        return response.error(res, SERVER_ERROR_STATUS, SERVER_ERROR_MESSAGE);
+    }
+}
+
+export async function getShippingRate(req, res) {
+    const { pincode, weight, cod } = req.query;
+    
+    if (!pincode || !weight) {
+        return response.error(res, resStatusCode.CLIENT_ERROR, "Pincode and weight are required");
+    }
+
+    try {
+        const result = await getShippingRates({
+            delivery_postcode: pincode,
+            weight: parseFloat(weight),
+            cod: cod === 'true' || cod === '1'
+        });
+
+        if (result.success) {
+            return response.success(res, resStatusCode.SUCCESS, "Shipping rate fetched", result);
+        } else {
+            return response.error(res, resStatusCode.BAD_REQUEST, result.message || result.error);
+        }
+    } catch (err) {
+        console.error("getShippingRate error:", err);
         return response.error(res, SERVER_ERROR_STATUS, SERVER_ERROR_MESSAGE);
     }
 }

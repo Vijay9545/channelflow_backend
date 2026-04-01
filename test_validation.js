@@ -17,7 +17,8 @@ const payload = {
     "gst": "18%",
     "categoryId": "69ba6b81476f24246ef40c96",
     "subCategoryId": "69ba6b81476f24246ef40c9d",
-    "mainImage": "https://dummyimage.com/600x400/000/fff"
+    "mainImage": "https://dummyimage.com/600x400/000/fff",
+    "estimatedDelivery": "3 - 5 business days"
 };
 
 const { error } = productValidation.validate(payload);

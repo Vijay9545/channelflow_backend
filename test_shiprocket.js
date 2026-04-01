@@ -29,6 +29,20 @@ async function testShiprocket() {
     const nickname = await getPrimaryPickupNickname(token);
     console.log(`✅ Result: ${nickname}`);
 
+    // 4. Test Shipping Rates
+    console.log("\n📦 Testing Shipping Rates...");
+    const rateRes = await getShippingRates({
+        delivery_postcode: "400001", // Mumbai
+        weight: 1,
+        cod: false
+    });
+    if (rateRes.success) {
+        console.log(`✅ Rate Found: ₹${rateRes.rate} via ${rateRes.courier}`);
+        console.log(`Estimated Delivery: ${rateRes.estimated_delivery}`);
+    } else {
+        console.warn("⚠️ Rate fetch failed:", rateRes.message || rateRes.error);
+    }
+
     console.log("\n✨ Test completed.");
 }
 

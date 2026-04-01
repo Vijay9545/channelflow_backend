@@ -169,3 +169,60 @@ export const trackShiprocketShipment = async (shipmentId) => {
         };
     }
 };
+/**
+ * Get Primary Pickup Pincode
+ * @param {string} token 
+ * @returns {Promise<string>}
+ */
+export const getPrimaryPickupPincode = async (token) => {
+    const locations = await getPickupLocations(token);
+    if (locations.length > 0) {
+        const primary = locations.find((l) => l.is_primary === 1) || locations.data?.[0] || locations[0];
+        return primary.pin_code?.toString() || "110001";
+    }
+    return "110001"; // Fallback
+};
+
+/**
+ * Get Shipping Rates / Serviceability
+ * @param {object} data { delivery_postcode, weight, cod }
+ * @returns {Promise<object>}
+ */
+export const getShippingRates = async (data) => {
+    try {
+        const token = await getShiprocketToken();
+        if (!token) throw new Error("Could not authenticate with Shiprocket");
+
+        const pickupPincode = await getPrimaryPickupPincode(token);
+
+        const params = {
+            pickup_postcode: pickupPincode,
+            delivery_postcode: data.delivery_postcode,
+            weight: data.weight,
+            cod: data.cod ? 1 : 0,
+        };
+
+        const response = await axios.get("https://apiv2.shiprocket.in/v1/external/courier/serviceability/", {
+            params,
+            headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (response.data && response.data.status === 200) {
+            const couriers = response.data.data.available_courier_companies;
+            if (couriers && couriers.length > 0) {
+                // Cheapest rate
+                const sorted = couriers.sort((a, b) => a.freight_charge - b.freight_charge);
+                return {
+                    success: true,
+                    rate: sorted[0].freight_charge,
+                    courier: sorted[0].courier_name,
+                    estimated_delivery: sorted[0].etd,
+                };
+            }
+        }
+        return { success: false, message: "No service available for this pincode" };
+    } catch (error) {
+        console.error("❌ Shiprocket Rate Error:", error.response?.data || error.message);
+        return { success: false, error: error.message };
+    }
+};
