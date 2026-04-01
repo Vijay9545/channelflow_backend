@@ -6,7 +6,8 @@ import {
     getOrderById,
     getAllOrders,
     trackOrder,
-    getShippingRate
+    getShippingRate,
+    cancelOrder
 } from "../controllers/orderController.js";
 import { validateAccessToken, authorizeRoles } from "../middleware/auth.js";
 
