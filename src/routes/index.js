@@ -20,6 +20,7 @@ router.use("/product", product);
 router.use("/cart", cart);
 router.use("/order", order);
 router.use("/reward", reward);
+router.use("/promotion", promotion);
 router.use("/promotions", promotion);
 router.use("/rating", rating);
 router.use("/pincode", pincode);

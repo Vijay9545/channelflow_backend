@@ -15,8 +15,8 @@ const promoImage = createS3Uploader({
     fileSizeMB: 5, // 5MB limit
 });
 
-// GET endpoint as requested
-router.get("/popup", validateAccessToken, getPromoPopup);
+// GET endpoint (Public)
+router.get("/popup", getPromoPopup);
 
 // Admin endpoint to configure the popup
 router.post("/popup", validateAccessToken, authorizeRoles(0), promoImage, updatePromoPopup);
